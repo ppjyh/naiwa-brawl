@@ -1,0 +1,15 @@
+node_modules/
+dist/
+tmp/
+.vite/
+shots/
+simout.txt
+*.local
+*.zip
+.DS_Store
+Thumbs.db
+
+# raw source art (the cropped/copied versions live in public/chars)
+/IMG_*.JPG
+/IMG_*.jpg
+/70b1d86ab03ee2362a35eb4a355e8d47.PNG

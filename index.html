@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#171221" />
+    <title>奶蛙大乱斗</title>
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="game" width="1200" height="760"></canvas>
+
+      <div id="topbar">
+        <div class="brand">
+          <span class="brand-mark">奶</span>
+          <div class="brand-text">
+            <b>奶蛙大乱斗</b>
+            <small>自动战斗 · 观战模式</small>
+          </div>
+        </div>
+        <button id="sound" class="icon-btn" title="音效开关">🔊</button>
+      </div>
+
+      <div id="menu" class="screen">
+        <div class="menu-head">
+          <h1>选两只奶蛙，开打</h1>
+          <p>它们会按物理乱弹、碰撞、放技能。你只负责看。</p>
+        </div>
+
+        <div class="draft">
+          <div class="slot" id="slot-left">
+            <div class="slot-tag">左方</div>
+            <div class="slot-ava"></div>
+            <div class="slot-meta">
+              <b class="slot-name"></b>
+              <span class="slot-role"></span>
+              <div class="slot-skills"></div>
+            </div>
+          </div>
+          <div class="vs">VS</div>
+          <div class="slot right" id="slot-right">
+            <div class="slot-tag">右方</div>
+            <div class="slot-ava"></div>
+            <div class="slot-meta">
+              <b class="slot-name"></b>
+              <span class="slot-role"></span>
+              <div class="slot-skills"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="roster-head">
+          <div class="tabs">
+            <button class="tab active" data-pick="0">选左方</button>
+            <button class="tab" data-pick="1">选右方</button>
+          </div>
+          <span class="roster-count">18 只奶蛙 · 点卡片选择</span>
+        </div>
+        <div class="roster" id="cards-roster"></div>
+
+        <div class="menu-foot">
+          <button id="random" class="ghost-btn">随机配对战</button>
+          <button id="start" class="primary-btn">开始战斗</button>
+        </div>
+        <div class="menu-hint">
+          <span>全程零操作</span>
+          <span>技能自动释放</span>
+          <span>一方倒下即结束</span>
+        </div>
+      </div>
+
+      <div id="hud-controls" class="hidden">
+        <button id="pause">暂停</button>
+        <button id="speed">1×</button>
+        <button id="restart">重开</button>
+        <button id="back">换角色</button>
+        <button id="sound2" title="音效开关">🔊</button>
+      </div>
+
+      <div id="result" class="screen hidden"></div>
+
+      <div id="loading"><span class="spinner"></span>正在捏奶蛙…</div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
