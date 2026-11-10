@@ -932,7 +932,7 @@ const spinKick: SkillDef = {
   id: 'spinKick',
   name: '回旋踢',
   icon: '旋',
-  desc: '原地扫一圈，12 伤害并击退身边的对手。',
+  desc: '原地扫一圈，16 伤害并击退身边的对手。',
   cd: 6,
   windup: 0.3,
   color: '#ffe0a3',
@@ -942,7 +942,7 @@ const spinKick: SkillDef = {
     w.sound('gore');
     w.ring(f.pos.x, f.pos.y, 16, 100, 0.32, '#ffe0a3', 6, true);
     w.burst(f.pos.x, f.pos.y, 14, '#ffe0a3', 200, 4);
-    maybeHit(f, w, 12, 420, 100, { stun: 0.15 });
+    maybeHit(f, w, 16, 420, 110, { stun: 0.15 });
   },
 };
 
@@ -1272,6 +1272,33 @@ const poopBomb: SkillDef = {
   },
 };
 
+const abyss: SkillDef = {
+  id: 'abyss',
+  name: '鱼符·深渊',
+  icon: '渊',
+  desc: '在对手脚下开一个深渊漩涡：落地 4 伤，持续 1.5 秒把人往中心拽，最后炸开 11 伤害。',
+  cd: 10,
+  windup: 0.35,
+  color: '#6fd3ff',
+  priority: 4,
+  ai: { min: 0, max: 420, chance: 0.85 },
+  cast(f, w, t) {
+    const target = t ?? enemyOf(f, w);
+    if (!target || target.dead) return;
+    const x = Math.max(ARENA.x + 24, Math.min(ARENA.x + ARENA.w - 24, target.pos.x));
+    const y = Math.max(ARENA.y + 24, Math.min(ARENA.y + ARENA.h - 24, target.pos.y));
+    w.sound('vortex');
+    w.spawnVortex(x, y, f.side);
+    w.damage(target, 4, f, {
+      kb: 100,
+      angle: angleOf(sub(target.pos, f.pos)),
+      stun: 0.1,
+    });
+    w.ring(x, y, 12, 72, 0.35, '#8fdcff', 6, true);
+    w.text(x, y - 46, '深渊！', '#2f6f8f', 16);
+  },
+};
+
 const fishBubbles: SkillDef = {
   id: 'fishBubbles',
   name: '泡泡弹幕',
@@ -1300,17 +1327,26 @@ const slippery: SkillDef = {
   id: 'slippery',
   name: '滑不溜秋',
   icon: '滑',
-  desc: '3 秒内 38% 概率闪掉伤害，移速 +20%。',
-  cd: 9,
+  desc: '3 秒内 38% 概率闪掉伤害，移速 +20%，起手回 6% 血并用水花震退 160 范围内对手 8 伤。',
+  cd: 8,
   windup: 0.15,
   color: '#a8d8f0',
   priority: 4,
-  ai: { min: 0, max: 999, hpBelow: 0.75, chance: 0.7 },
+  ai: { min: 0, max: 999, chance: 0.75 },
   cast(f, w) {
     f.dodgeT = 3;
+    w.heal(f, f.maxHp * 0.06);
     w.sound('blink');
-    w.ring(f.pos.x, f.pos.y, 10, 66, 0.35, '#a8d8f0', 4, false);
+    w.ring(f.pos.x, f.pos.y, 10, 160, 0.4, '#a8d8f0', 6, true);
     w.text(f.pos.x, f.pos.y - 68, '滑溜！', '#2f7fa8', 15);
+    const target = enemyOf(f, w);
+    if (target && !target.dead && dist(f.pos, target.pos) < 160) {
+      w.damage(target, 8, f, {
+        kb: 220,
+        angle: angleOf(sub(target.pos, f.pos)),
+        stun: 0.1,
+      });
+    }
   },
 };
 
@@ -2019,6 +2055,7 @@ export const SKILLS: Record<string, SkillDef> = {
   delivery,
   stinkSelf,
   poopBomb,
+  abyss,
   fishBubbles,
   slippery,
   smite,
