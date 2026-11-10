@@ -518,9 +518,12 @@ export class World {
       f.pos.x = ARENA.x + ARENA.w - f.radius;
       f.vel.x = -Math.abs(f.vel.x) * WALL_BOUNCE;
     }
-    if (f.pos.y - f.radius < ARENA.y) {
+    // the sprite is much taller than the collision circle; at the top rim use
+    // the body height so heads stop at the wall instead of hanging over it
+    const topReach = f.radius * 2.85;
+    if (f.pos.y - topReach < ARENA.y) {
       impact = Math.max(impact, -f.vel.y);
-      f.pos.y = ARENA.y + f.radius;
+      f.pos.y = ARENA.y + topReach;
       f.vel.y = Math.abs(f.vel.y) * WALL_BOUNCE;
     } else if (f.pos.y + f.radius > ARENA.y + ARENA.h) {
       impact = Math.max(impact, f.vel.y);

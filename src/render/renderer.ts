@@ -68,10 +68,10 @@ export class Renderer {
     this.drawBackdrop();
     this.drawArena(world);
 
-    // clip to the bowl, but allow heads to overlap the top rim instead of
-    // getting sliced off when a frog hugs the top wall
+    // floor-level clip; the top wall uses a body-height collision so heads
+    // already stop at the rim and never need to be sliced
     ctx.save();
-    roundRectPath(ctx, ARENA.x + 4, ARENA.y - 58, ARENA.w - 8, ARENA.h + 54, 34);
+    roundRectPath(ctx, ARENA.x + 4, ARENA.y + 4, ARENA.w - 8, ARENA.h - 8, 34);
     ctx.clip();
 
     this.drawTelegraphs(world);
