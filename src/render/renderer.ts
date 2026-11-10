@@ -986,7 +986,7 @@ export class Renderer {
     ctx.textAlign = left ? 'left' : 'right';
     ctx.font = `900 21px ${FONT}`;
     ctx.fillStyle = '#fff6e3';
-    ctx.fillText(f.def.name, nameX, 27);
+    ctx.fillText(f.origin.name, nameX, 27);
 
     ctx.font = `700 10px ${FONT}`;
     ctx.fillStyle = 'rgba(255, 246, 227, 0.42)';

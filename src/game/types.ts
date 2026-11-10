@@ -41,6 +41,8 @@ export interface SkillDef {
 export interface Frog {
   side: Side;
   def: CharDef;
+  /** Original roster identity, kept even after 奶蛋 hatches into another form. */
+  origin: CharDef;
   pos: Vec2;
   vel: Vec2;
   radius: number;

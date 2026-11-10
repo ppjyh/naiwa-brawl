@@ -49,6 +49,7 @@ function makeFrog(def: CharDef, side: Side): Frog {
   return {
     side,
     def,
+    origin: def,
     pos: { x: SPAWN[side].x, y: SPAWN[side].y },
     vel: { x: 0, y: 0 },
     radius: def.radius,

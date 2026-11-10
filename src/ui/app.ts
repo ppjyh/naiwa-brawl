@@ -284,7 +284,10 @@ export class App {
   private showResult(w: World): void {
     const draw = w.winner === null;
     const winner = draw ? null : w.frogs[w.winner as Side];
-    const portrait = winner ? this.arts[winner.def.id]?.portrait : this.arts[w.frogs[0].def.id]?.portrait;
+    const winnerOrigin = winner ? winner.origin : null;
+    const portrait = winnerOrigin
+      ? this.arts[winnerOrigin.id]?.portrait
+      : this.arts[w.frogs[0].origin.id]?.portrait;
 
     const totalSkills = w.frogs[0].stats.skills + w.frogs[1].stats.skills;
     const totalDamage = Math.round(w.frogs[0].stats.damage + w.frogs[1].stats.damage);
@@ -294,8 +297,10 @@ export class App {
       <div class="result-card">
         <div class="win-label">${draw ? 'D R A W' : 'W I N N E R'}</div>
         <div class="result-ava" style="background-image:url('${portrait ?? ''}')"></div>
-        <div class="result-name">${draw ? '同归于尽' : `${winner!.def.name} 获胜`}</div>
-        <div class="result-sub">用时 ${fmtTime(w.time)} · 剩余 ${draw ? '—' : Math.ceil(winner!.hp)} HP${boil}</div>
+        <div class="result-name">${draw ? '同归于尽' : `${winnerOrigin!.name} 获胜`}</div>
+        <div class="result-sub">用时 ${fmtTime(w.time)} · 剩余 ${draw ? '—' : Math.ceil(winner!.hp)} HP${boil}${
+          winner && winner.def.id !== winner.origin.id ? ` · 孵化成 ${winner.def.name}` : ''
+        }</div>
         <div class="result-stats">
           <div class="cell"><b>${totalDamage}</b><span>总伤害</span></div>
           <div class="cell"><b>${totalSkills}</b><span>技能释放</span></div>
