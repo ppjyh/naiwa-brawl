@@ -38,9 +38,15 @@ function formatTime(t: number): string {
 export class Renderer {
   private readonly ctx: CanvasRenderingContext2D;
   private dpr = 1;
+  private readonly bananaImg = new Image();
+  private bananaReady = false;
 
   constructor(private readonly canvas: HTMLCanvasElement) {
     this.ctx = canvas.getContext('2d')!;
+    this.bananaImg.onload = () => {
+      this.bananaReady = true;
+    };
+    this.bananaImg.src = new URL('props/banana.png', document.baseURI).href;
     this.resize();
   }
 
@@ -635,18 +641,27 @@ export class Renderer {
           ctx.stroke();
         }
         ctx.globalAlpha = armed ? 1 : 0.7;
-        ctx.fillStyle = '#f7d34a';
-        ctx.beginPath();
-        ctx.ellipse(0, -4, 20, 8, -0.35, 0, TAU);
-        ctx.ellipse(6, 2, 18, 7, 0.5, 0, TAU);
-        ctx.fill();
-        ctx.strokeStyle = '#b98a1f';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-        ctx.fillStyle = '#6b4a12';
-        ctx.beginPath();
-        ctx.arc(-14, -8, 2.6, 0, TAU);
-        ctx.fill();
+        if (this.bananaReady) {
+          const bw = 74;
+          const bh = (bw * this.bananaImg.height) / this.bananaImg.width;
+          ctx.save();
+          ctx.rotate(Math.sin(world.animTime * 2 + t.x * 0.03) * 0.06);
+          ctx.drawImage(this.bananaImg, -bw / 2, -bh + 7, bw, bh);
+          ctx.restore();
+        } else {
+          ctx.fillStyle = '#f7d34a';
+          ctx.beginPath();
+          ctx.ellipse(0, -4, 20, 8, -0.35, 0, TAU);
+          ctx.ellipse(6, 2, 18, 7, 0.5, 0, TAU);
+          ctx.fill();
+          ctx.strokeStyle = '#b98a1f';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+          ctx.fillStyle = '#6b4a12';
+          ctx.beginPath();
+          ctx.arc(-14, -8, 2.6, 0, TAU);
+          ctx.fill();
+        }
         ctx.restore();
         continue;
       }

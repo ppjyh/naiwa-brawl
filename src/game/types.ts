@@ -81,6 +81,7 @@ export interface Frog {
   reviveUsed: boolean;
   copyUsed: boolean;
   splitUsed: boolean;
+  lastSkillId: string | null;
   isSummon: boolean;
   summonKind: 'tiger' | 'mouse' | null;
   clawCd: number;

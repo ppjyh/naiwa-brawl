@@ -88,6 +88,7 @@ function makeFrog(def: CharDef, side: Side): Frog {
     reviveUsed: false,
     copyUsed: false,
     splitUsed: false,
+    lastSkillId: null,
     isSummon: false,
     summonKind: null,
     clawCd: 0,
@@ -395,6 +396,7 @@ export class World {
         const slot = f.def.skills.indexOf(w.def.id);
         if (slot >= 0) f.cds[slot] = w.def.cd;
         f.stats.skills += 1;
+        f.lastSkillId = w.def.id;
         w.def.cast(f, this, foe.dead ? null : foe);
       }
     } else if (f.action) {
@@ -812,8 +814,8 @@ export class World {
       y,
       owner,
       arm: kind === 'egg' ? 1.1 : 0.6,
-      life: kind === 'egg' ? 8 : 5,
-      maxLife: kind === 'egg' ? 8 : 5,
+      life: kind === 'egg' ? 8 : 1e9,
+      maxLife: kind === 'egg' ? 8 : 1e9,
       radius: kind === 'egg' ? 110 : 80,
       blink: 0,
     });

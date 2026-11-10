@@ -1050,16 +1050,22 @@ const banana: SkillDef = {
   id: 'banana',
   name: '香蕉皮',
   icon: '蕉',
-  desc: '在脚下丢一块香蕉皮，对手踩中滑倒 1 秒并受 6 伤害。',
-  cd: 5,
+  desc: '朝对手方向丢一块香蕉皮，落地后永久留在场上且没有数量上限；踩中滑倒 1 秒并受 6 伤害。',
+  cd: 4,
   windup: 0.2,
   color: '#ffe07a',
   priority: 2,
-  ai: { min: 0, max: 999, chance: 0.45 },
-  cast(f, w) {
+  ai: { min: 0, max: 999, chance: 0.55 },
+  cast(f, w, t) {
+    const target = t ?? enemyOf(f, w);
+    const angle = target && !target.dead ? angleOf(sub(target.pos, f.pos)) : f.facing;
+    const throwDist = 120;
+    const x = clamp(f.pos.x + Math.cos(angle) * throwDist, ARENA.x + 24, ARENA.x + ARENA.w - 24);
+    const y = clamp(f.pos.y + Math.sin(angle) * throwDist, ARENA.y + 24, ARENA.y + ARENA.h - 24);
     w.sound('egg');
-    w.spawnTrap(f.pos.x, f.pos.y + f.radius * 0.4, f.side, 'banana');
-    w.ring(f.pos.x, f.pos.y, 8, 38, 0.25, '#ffe07a', 3, false);
+    w.spawnTrap(x, y, f.side, 'banana');
+    w.ring(x, y, 8, 38, 0.25, '#ffe07a', 3, false);
+    w.burst(x, y, 8, '#ffe07a', 120, 3);
   },
 };
 
@@ -1822,26 +1828,30 @@ const sheepAstral: SkillDef = {
   },
 };
 
-const monkeyHex: SkillDef = {
-  id: 'monkeyHex',
-  name: '猴符·定身',
-  icon: '定',
-  desc: '把对手变成一只小奶蛙 2.5 秒：移速减半、不能放技能、受到伤害 +20%。',
+const monkeyMimic: SkillDef = {
+  id: 'monkeyMimic',
+  name: '猴符·模仿',
+  icon: '仿',
+  desc: '模仿对手最近放过的技能，立刻用同一招还回去；对手还没出招时，改扔一块香蕉皮。',
   cd: 12,
-  windup: 0.3,
+  windup: 0.25,
   color: '#ffe0a3',
   priority: 4,
-  ai: { min: 0, max: 320, chance: 0.85 },
+  ai: { min: 0, max: 999, chance: 0.85 },
   cast(f, w, t) {
     const target = t ?? enemyOf(f, w);
-    if (!target || target.dead) return;
-    target.polymorphT = 2.5;
-    w.sound('hatch');
-    w.ring(target.pos.x, target.pos.y, 10, 130, 0.45, '#ffe0a3', 6, true);
-    w.burst(target.pos.x, target.pos.y, 24, '#ffe0a3', 260, 5);
-    w.text(target.pos.x, target.pos.y - 64, '变小！', '#8a5a00', 18);
-    w.damage(target, 16, f, { kb: 120, angle: angleOf(sub(target.pos, f.pos)), stun: 0.1 });
-    w.shake(5);
+    const id = target?.lastSkillId ?? null;
+    const banned = new Set(['monkeyMimic', 'monkeyHex', 'monkeyCopy', 'hatch', 'tigerSplit', 'revive']);
+    if (id && !banned.has(id)) {
+      const def = skillById(id);
+      w.sound('steal');
+      w.ring(f.pos.x, f.pos.y, 12, 120, 0.4, '#ffe0a3', 6, true);
+      w.text(f.pos.x, f.pos.y - 72, `模仿·${def.name}`, '#8a5a00', 16);
+      def.cast(f, w, target);
+    } else {
+      w.text(f.pos.x, f.pos.y - 72, '没招可抄，扔香蕉', '#8a5a00', 14);
+      banana.cast(f, w, target);
+    }
   },
 };
 
@@ -2068,7 +2078,7 @@ export const SKILLS: Record<string, SkillDef> = {
   snakeInvis,
   horseHeal,
   sheepAstral,
-  monkeyHex,
+  monkeyMimic,
   roosterLevitate,
   dogImmortal,
   pigLaser,
