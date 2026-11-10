@@ -259,8 +259,8 @@ button {
   width: 52px;
   height: 52px;
   border-radius: 14px;
-  background-size: 128% 128%;
-  background-position: center 42%;
+  background-size: cover;
+  background-position: center;
   background-repeat: no-repeat;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
 }
@@ -401,8 +401,8 @@ button {
   height: 58px;
   flex: 0 0 58px;
   border-radius: 16px;
-  background-size: 132% 132%;
-  background-position: center 40%;
+  background-size: cover;
+  background-position: center;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
 }
 
@@ -490,7 +490,7 @@ button {
   width: 58px;
   height: 58px;
   flex: 0 0 58px;
-  background-size: 132% 132%;
+  background-size: cover;
 }
 
 .roster .card .info {
@@ -664,8 +664,8 @@ button {
   height: 116px;
   border-radius: 32px;
   margin: 14px auto 8px;
-  background-size: 126% 126%;
-  background-position: center 42%;
+  background-size: cover;
+  background-position: center;
   background-repeat: no-repeat;
   background-color: rgba(255, 246, 227, 0.06);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12), 0 16px 40px rgba(0, 0, 0, 0.35);
@@ -787,5 +787,48 @@ button {
   }
   .brand-text small {
     display: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .screen {
+    padding: 72px 10px 22px;
+    overflow-x: hidden;
+  }
+  .roster {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    width: 100%;
+  }
+  .roster .card {
+    min-width: 0;
+    padding: 8px 5px 7px;
+  }
+  .roster .card .ava {
+    width: 64px;
+    height: 64px;
+    flex: 0 0 64px;
+  }
+  .roster .name-row b {
+    font-size: 13px;
+  }
+  .roster .chip {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .draft,
+  .roster-head {
+    width: 100%;
+  }
+  .slot {
+    min-width: 0;
+  }
+  .menu-head h1 {
+    font-size: 28px;
+  }
+  .menu-head p {
+    font-size: 12px;
   }
 }

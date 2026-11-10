@@ -26,13 +26,16 @@ function loadImage(src: string): Promise<HTMLImageElement> {
  * bottom-right corner, then crop to the character's bounding box.
  */
 function cutout(img: HTMLImageElement): HTMLCanvasElement {
-  const w = img.naturalWidth;
-  const h = img.naturalHeight;
+  // Downscale before pixel work: 18 full-size JPEGs at once can exhaust the
+  // canvas memory budget on phones and silently fall back to blob sprites.
+  const scale = Math.min(1, 512 / Math.max(img.naturalWidth, img.naturalHeight));
+  const w = Math.max(1, Math.round(img.naturalWidth * scale));
+  const h = Math.max(1, Math.round(img.naturalHeight * scale));
   const full = document.createElement('canvas');
   full.width = w;
   full.height = h;
   const ctx = full.getContext('2d', { willReadFrequently: true })!;
-  ctx.drawImage(img, 0, 0);
+  ctx.drawImage(img, 0, 0, w, h);
   const image = ctx.getImageData(0, 0, w, h);
   const d = image.data;
 
@@ -167,6 +170,8 @@ export async function loadCharArt(def: CharDef): Promise<CharArt> {
 }
 
 export async function loadAllArts(defs: readonly CharDef[]): Promise<Record<string, CharArt>> {
-  const list = await Promise.all(defs.map((d) => loadCharArt(d)));
+  // sequential: mobile Safari hates 18 simultaneous image decodes + canvases
+  const list: CharArt[] = [];
+  for (const d of defs) list.push(await loadCharArt(d));
   return Object.fromEntries(list.map((a) => [a.key, a]));
 }
