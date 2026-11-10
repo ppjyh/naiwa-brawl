@@ -1151,7 +1151,7 @@ const hatch: SkillDef = {
   id: 'hatch',
   name: '孵化',
   icon: '孵',
-  desc: '破壳变成随机一只奶蛙，按新形态 60% 血量继续打。',
+  desc: '破壳变成随机一只奶蛙，按新形态 80% 血量继续打。',
   cd: 999,
   windup: 0.8,
   color: '#fff3d6',

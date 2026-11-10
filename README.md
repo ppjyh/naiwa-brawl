@@ -10,6 +10,11 @@
 
 ![结算界面](docs/screenshots/result.png)
 
+## 策划案
+
+- [游戏策划案（Word）](docs/奶蛙大乱斗-游戏策划案.docx)
+- [游戏策划案（PDF）](docs/奶蛙大乱斗-游戏策划案.pdf)
+
 ---
 
 ## 运行
