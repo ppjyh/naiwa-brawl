@@ -1593,20 +1593,13 @@ const ratAnimate: SkillDef = {
   id: 'ratAnimate',
   name: '鼠符·活物',
   icon: '鼠',
-  desc: '召唤一只有 14 点独立血量的活老鼠，它会追着对手咬，被打完才消失。',
+  desc: '召唤一只有 14 点独立血量的活老鼠，它会追着对手咬，被打完才消失；没有数量上限。',
   cd: 7,
   windup: 0.3,
   color: '#d9c27a',
   priority: 3,
   ai: { min: 0, max: 999, chance: 0.7 },
   cast(f, w) {
-    const mice = w.clones.filter(
-      (c) => c.side === f.side && c.summonKind === 'mouse' && !c.dead,
-    ).length;
-    if (mice >= 2) {
-      w.text(f.pos.x, f.pos.y - 70, '鼠群已满', '#8a5a00', 14);
-      return;
-    }
     w.sound('rat');
     w.spawnMouseSummon(f);
     w.ring(f.pos.x, f.pos.y, 8, 54, 0.3, '#ffe08a', 4, false);
