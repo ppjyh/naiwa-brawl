@@ -2,7 +2,7 @@ export const VIEW_W = 1200;
 export const VIEW_H = 760;
 
 /** Playfield. Everything lives in this rect; the HUD occupies the band above it. */
-export const ARENA = { x: 320, y: 130, w: 560, h: 560 };
+export const ARENA = { x: 330, y: 190, w: 540, h: 540 };
 
 export const SPAWN: [{ x: number; y: number }, { x: number; y: number }] = [
   { x: ARENA.x + ARENA.w * 0.22, y: ARENA.y + ARENA.h * 0.5 },

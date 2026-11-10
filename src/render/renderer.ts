@@ -68,9 +68,10 @@ export class Renderer {
     this.drawBackdrop();
     this.drawArena(world);
 
-    // keep sprites inside the bowl: the rim occludes anyone hugging the wall
+    // clip to the bowl, but allow heads to overlap the top rim instead of
+    // getting sliced off when a frog hugs the top wall
     ctx.save();
-    roundRectPath(ctx, ARENA.x + 4, ARENA.y + 4, ARENA.w - 8, ARENA.h - 8, 34);
+    roundRectPath(ctx, ARENA.x + 4, ARENA.y - 58, ARENA.w - 8, ARENA.h + 54, 34);
     ctx.clip();
 
     this.drawTelegraphs(world);

@@ -306,7 +306,7 @@ const steal: SkillDef = {
   id: 'steal',
   name: '偷奶酪',
   icon: '偷',
-  desc: '偷走对手 8% 攻击力（最多 4 层，持续 10 秒），并造成 12 伤害。',
+  desc: '偷走对手 8% 攻击力（最多 4 层，持续 16 秒），并造成 14 伤害。',
   cd: 7,
   windup: 0.3,
   color: '#ffd166',
@@ -316,7 +316,7 @@ const steal: SkillDef = {
     const target = t ?? enemyOf(f, w);
     if (target && !target.dead && dist(f.pos, target.pos) < f.radius + target.radius + 40) {
       f.buffStacks = Math.min(4, f.buffStacks + 1);
-      f.buffT = 10;
+      f.buffT = 16;
       w.damage(target, 14, f, { kb: 180, angle: angleOf(sub(target.pos, f.pos)) });
       w.text(f.pos.x, f.pos.y - 70, `攻击 +${f.buffStacks * 8}%`, '#8a5a00', 16);
       w.burst(f.pos.x, f.pos.y, 10, '#ffe07a', 120, 4);
