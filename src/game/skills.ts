@@ -36,7 +36,7 @@ function makeAction(
 }
 
 function enemyOf(f: Frog, w: World): Frog {
-  return w.frogs[f.side === 0 ? 1 : 0];
+  return w.nearestFoe(f) ?? w.frogs[f.side === 0 ? 1 : 0];
 }
 
 function withinCone(f: Frog, t: Frog, range: number, halfAngle: number): boolean {
@@ -1593,15 +1593,22 @@ const ratAnimate: SkillDef = {
   id: 'ratAnimate',
   name: '鼠符·活物',
   icon: '鼠',
-  desc: '把地面变成一只活老鼠追着对手跑，追到就炸 10 伤害。',
+  desc: '召唤一只有 14 点独立血量的活老鼠，它会追着对手咬，被打完才消失。',
   cd: 7,
   windup: 0.3,
   color: '#d9c27a',
   priority: 3,
   ai: { min: 0, max: 999, chance: 0.7 },
   cast(f, w) {
+    const mice = w.clones.filter(
+      (c) => c.side === f.side && c.summonKind === 'mouse' && !c.dead,
+    ).length;
+    if (mice >= 2) {
+      w.text(f.pos.x, f.pos.y - 70, '鼠群已满', '#8a5a00', 14);
+      return;
+    }
     w.sound('rat');
-    w.spawnMouseMinion(f.pos.x, f.pos.y - f.radius * 0.3, f.side);
+    w.spawnMouseSummon(f);
     w.ring(f.pos.x, f.pos.y, 8, 54, 0.3, '#ffe08a', 4, false);
     w.text(f.pos.x, f.pos.y - 72, '活过来！', '#8a5a00', 15);
   },
@@ -1633,28 +1640,31 @@ const oxStrength: SkillDef = {
   },
 };
 
-const tigerBalance: SkillDef = {
-  id: 'tigerBalance',
-  name: '虎符·阴阳',
-  icon: '衡',
-  desc: '抽走对手当前生命的一截补给自己，血量越低收益越高。',
-  cd: 11,
+const tigerSplit: SkillDef = {
+  id: 'tigerSplit',
+  name: '虎符·分裂',
+  icon: '分',
+  desc: '分裂出另一只奶虎；两只奶虎各自独立血量，一只倒下另一只还能打。',
+  cd: 16,
   windup: 0.45,
   color: '#ffe6a0',
   priority: 4,
-  ai: { min: 0, max: 999, hpBelow: 0.75, chance: 0.9 },
-  cast(f, w, t) {
-    const target = t ?? enemyOf(f, w);
-    if (!target || target.dead) return;
-    const drain = Math.min(50, Math.round(target.hp * 0.2));
-    target.hp = Math.max(1, target.hp - drain);
-    f.hp = Math.min(f.maxHp, f.hp + drain);
-    w.sound('balance');
-    w.ring(f.pos.x, f.pos.y, 16, 120, 0.45, '#fff3d6', 6, false);
-    w.ring(target.pos.x, target.pos.y, 16, 120, 0.45, '#3a2412', 6, false);
-    w.text(600, 300, '阴阳调和', '#8a5a00', 24);
-    w.text(target.pos.x, target.pos.y - 60, `-${drain}`, '#c81d1d', 18);
-    w.shake(6);
+  ai: { min: 0, max: 999, hpBelow: 0.95, chance: 0.9 },
+  cast(f, w) {
+    if (!w.splitTiger(f)) {
+      w.text(f.pos.x, f.pos.y - 70, '已经分裂过了', '#8a5a00', 14);
+      return;
+    }
+    const target = enemyOf(f, w);
+    if (target && !target.dead && dist(f.pos, target.pos) < 160) {
+      w.damage(target, 12, f, {
+        kb: 300,
+        angle: angleOf(sub(target.pos, f.pos)),
+        stun: 0.15,
+      });
+    }
+    w.sound('strength');
+    w.text(f.pos.x, f.pos.y - 70, '一分为二！', '#b3541e', 18);
   },
 };
 
@@ -1783,38 +1793,26 @@ const sheepAstral: SkillDef = {
   },
 };
 
-const monkeyCopy: SkillDef = {
-  id: 'monkeyCopy',
-  name: '猴符·变形',
-  icon: '变',
-  desc: '随机变成另一只奶蛙，连属性带技能一起复制，直到倒下。',
-  cd: 999,
-  windup: 0.7,
+const monkeyHex: SkillDef = {
+  id: 'monkeyHex',
+  name: '猴符·定身',
+  icon: '定',
+  desc: '把对手变成一只小奶蛙 2.5 秒：移速减半、不能放技能、受到伤害 +20%。',
+  cd: 12,
+  windup: 0.3,
   color: '#ffe0a3',
-  priority: 5,
-  ai: { min: 0, max: 999, hpBelow: 0.75, chance: 1 },
-  cast(f, w) {
-    if (f.copyUsed) return;
-    f.copyUsed = true;
-    const pool = CHARS.filter((c) => c.id !== f.def.id);
-    const def = pool[w.rng.int(0, pool.length - 1)];
-    f.def = def;
-    f.maxHp = def.hp;
-    f.hp = Math.max(1, Math.round(def.hp * 0.8));
-    f.radius = def.radius;
-    f.mass = def.mass;
-    f.speed = def.speed;
-    f.baseAtk = def.atk;
-    f.atk = def.atk;
-    f.kbr = def.kbr;
-    f.cds = [1.5, 2.5];
-    f.buffStacks = 0;
-    f.invuln = Math.max(f.invuln, 0.6);
+  priority: 4,
+  ai: { min: 0, max: 320, chance: 0.85 },
+  cast(f, w, t) {
+    const target = t ?? enemyOf(f, w);
+    if (!target || target.dead) return;
+    target.polymorphT = 2.5;
     w.sound('hatch');
-    w.ring(f.pos.x, f.pos.y, 16, 120, 0.5, '#ffe0a3', 6, false);
-    w.burst(f.pos.x, f.pos.y, 26, '#ffe0a3', 260, 5);
-    w.text(f.pos.x, f.pos.y - 70, `变成 ${def.name}！`, '#8a5a00', 18);
-    w.shake(6);
+    w.ring(target.pos.x, target.pos.y, 10, 130, 0.45, '#ffe0a3', 6, true);
+    w.burst(target.pos.x, target.pos.y, 24, '#ffe0a3', 260, 5);
+    w.text(target.pos.x, target.pos.y - 64, '变小！', '#8a5a00', 18);
+    w.damage(target, 16, f, { kb: 120, angle: angleOf(sub(target.pos, f.pos)), stun: 0.1 });
+    w.shake(5);
   },
 };
 
@@ -2034,13 +2032,13 @@ export const SKILLS: Record<string, SkillDef> = {
   revive,
   ratAnimate,
   oxStrength,
-  tigerBalance,
+  tigerSplit,
   rabbitHaste,
   dragonFire,
   snakeInvis,
   horseHeal,
   sheepAstral,
-  monkeyCopy,
+  monkeyHex,
   roosterLevitate,
   dogImmortal,
   pigLaser,

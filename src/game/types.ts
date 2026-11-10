@@ -78,6 +78,11 @@ export interface Frog {
   dodgeT: number;
   reviveUsed: boolean;
   copyUsed: boolean;
+  splitUsed: boolean;
+  isSummon: boolean;
+  summonKind: 'tiger' | 'mouse' | null;
+  clawCd: number;
+  polymorphT: number;
   strengthT: number;
   hasteT: number;
   invisT: number;

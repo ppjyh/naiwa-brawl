@@ -334,7 +334,7 @@ export class Renderer {
   // ---------------------------------------------------------------- frogs
 
   private drawFrogs(world: World, arts: Record<string, CharArt>): void {
-    const sorted = [...world.frogs].sort((a, b) => a.pos.y - b.pos.y);
+    const sorted = [...world.frogs, ...world.clones].sort((a, b) => a.pos.y - b.pos.y);
     for (const f of sorted) this.drawFrog(world, f, arts);
   }
 
@@ -344,7 +344,7 @@ export class Renderer {
     const art = arts[f.def.id];
     if (!art) return;
 
-    const bodyH = f.radius * 3.8;
+    const bodyH = f.radius * 3.8 * (f.polymorphT > 0 ? 0.62 : 1);
     let h = bodyH;
     let w = h * art.aspect;
     const maxW = f.radius * 6;
@@ -528,9 +528,9 @@ export class Renderer {
     if (f.dead) return;
 
     // mini hp bar
-    const bw = 62;
+    const bw = f.isSummon ? 44 : 62;
     const bx = f.pos.x - bw / 2;
-    const by = groundY - h - 16;
+    const by = Math.max(ARENA.y + 6, groundY - h - 16);
     ctx.save();
     ctx.globalAlpha = 0.9;
     ctx.fillStyle = 'rgba(30, 22, 16, 0.55)';

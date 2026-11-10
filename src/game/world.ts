@@ -11,7 +11,7 @@ import {
   WALL_BOUNCE,
   WALL_SLAM_SPEED,
 } from './constants';
-import type { CharDef } from './chars';
+import { SUMMON_MOUSE, type CharDef } from './chars';
 import { RNG } from '../core/rng';
 import { add, angleOf, dist, fromAngle, len, mul, norm, sub } from '../core/math';
 import { skillById } from './skills';
@@ -86,6 +86,11 @@ function makeFrog(def: CharDef, side: Side): Frog {
     dodgeT: 0,
     reviveUsed: false,
     copyUsed: false,
+    splitUsed: false,
+    isSummon: false,
+    summonKind: null,
+    clawCd: 0,
+    polymorphT: 0,
     strengthT: 0,
     hasteT: 0,
     invisT: 0,
@@ -141,6 +146,7 @@ export class World {
   stinks: StinkZone[] = [];
   blasts: Blast[] = [];
   minions: Minion[] = [];
+  clones: Frog[] = [];
 
   private contactCd = 0;
 
@@ -204,7 +210,7 @@ export class World {
     this.updateBoil(step);
     // late-match chip damage: guarantees even the slipperiest matchup ends
     if (this.time > 50) {
-      for (const f of this.frogs) {
+      for (const f of this.allBodies()) {
         if (f.dead) continue;
         f.hp -= f.maxHp * 0.01 * step;
         if (f.immortalT > 0 && f.hp < 1) f.hp = 1;
@@ -212,7 +218,7 @@ export class World {
       this.chipText -= step;
       if (this.chipText <= 0) {
         this.chipText = 1;
-        for (const f of this.frogs) {
+        for (const f of this.allBodies()) {
           if (!f.dead) {
             this.text(
               f.pos.x + this.rng.range(-6, 6),
@@ -228,6 +234,7 @@ export class World {
     this.contactCd = Math.max(0, this.contactCd - step);
 
     for (const f of this.frogs) this.updateFrog(f, step);
+    for (const c of this.clones) this.updateSummon(c, step);
     this.resolveBodies();
     this.updateProjectiles(step);
     this.updateTraps(step);
@@ -235,6 +242,7 @@ export class World {
     this.updateStinks(step);
     this.updateBlasts(step);
     this.updateMinions(step);
+    this.cleanupClones();
     this.checkDeaths();
     this.updateFx(step);
   }
@@ -263,7 +271,7 @@ export class World {
   }
 
   private updateFrog(f: Frog, step: number): void {
-    const foe = this.foe(f);
+    const foe = this.nearestFoe(f) ?? this.foe(f);
     if (f.hidden > 0) {
       f.hidden = Math.max(0, f.hidden - step);
       f.pos.x = foe.pos.x;
@@ -298,6 +306,7 @@ export class World {
     f.basicCd = Math.max(0, f.basicCd - step);
     f.counterT = Math.max(0, f.counterT - step);
     f.dodgeT = Math.max(0, f.dodgeT - step);
+    f.polymorphT = Math.max(0, f.polymorphT - step);
     f.strengthT = Math.max(0, f.strengthT - step);
     f.hasteT = Math.max(0, f.hasteT - step);
     f.invisT = Math.max(0, f.invisT - step);
@@ -421,7 +430,8 @@ export class World {
       (f.rage ? 1.25 : 1) *
       (f.dodgeT > 0 ? 1.2 : 1) *
       (f.hasteT > 0 ? 1.8 : 1) *
-      (f.astralT > 0 ? 1.25 : 1);
+      (f.astralT > 0 ? 1.25 : 1) *
+      (f.polymorphT > 0 ? 0.55 : 1);
 
     let sp = len(f.vel);
 
@@ -452,6 +462,48 @@ export class World {
     this.clampWalls(f);
 
     if (len(f.vel) > 5) f.facing = Math.atan2(f.vel.y, f.vel.x);
+  }
+
+  private updateSummon(c: Frog, step: number): void {
+    if (c.dead) return;
+    c.hitFlash = Math.max(0, c.hitFlash - step);
+    c.stun = Math.max(0, c.stun - step);
+    c.invuln = Math.max(0, c.invuln - step);
+    c.clawCd = Math.max(0, c.clawCd - step);
+    c.wallCd = Math.max(0, c.wallCd - step);
+    c.polymorphT = Math.max(0, c.polymorphT - step);
+    c.squash *= Math.pow(0.02, step);
+    this.updateBurn(c, step);
+    this.stepPhysics(c, step);
+    if (c.hp <= 0 || c.stun > 0) return;
+
+    const target = this.nearestFoe(c);
+    if (!target || target.dead) return;
+    c.facing = Math.atan2(target.pos.y - c.pos.y, target.pos.x - c.pos.x);
+    const reach = c.radius + target.radius + (c.summonKind === 'tiger' ? 36 : 26);
+    if (dist(c.pos, target.pos) < reach && c.clawCd <= 0) {
+      c.clawCd = c.summonKind === 'tiger' ? 1.0 : 1.1;
+      const tiger = c.summonKind === 'tiger';
+      this.damage(target, tiger ? 5 : 2, c, {
+        kb: tiger ? 260 : 70,
+        angle: c.facing,
+        stun: 0.05,
+      });
+      this.burst(target.pos.x, target.pos.y, tiger ? 10 : 6, '#ffe0a3', 180, 4);
+    }
+  }
+
+  private cleanupClones(): void {
+    this.clones = this.clones.filter((c) => {
+      if (c.hp > 0 && !c.dead) return true;
+      if (!c.dead) {
+        c.dead = true;
+        this.burst(c.pos.x, c.pos.y, 18, '#ffe6c8', 260, 5);
+        this.ring(c.pos.x, c.pos.y, 8, 70, 0.3, '#ffe6c8', 4, false);
+        this.text(c.pos.x, c.pos.y - 40, '召唤物消散', '#8a6a2e', 14);
+      }
+      return false;
+    });
   }
 
   private clampWalls(f: Frog): void {
@@ -523,13 +575,13 @@ export class World {
     f.aiTimer -= step;
     if (f.aiTimer <= 0) {
       f.aiTimer = 0.09 + this.rng.range(0, 0.05);
-      this.decide(f, foe);
+      this.decide(f, this.nearestFoe(f) ?? foe);
     }
   }
 
   private decide(f: Frog, foe: Frog): void {
     if (f.dead) return;
-    if (f.stun > 0 || f.action || f.windup) return;
+    if (f.stun > 0 || f.action || f.windup || f.polymorphT > 0) return;
     if (foe.dead) return;
     if (foe.hidden > 0 || f.astralT > 0) return;
 
@@ -598,6 +650,7 @@ export class World {
       dmg *= DAMAGE_SCALE;
     }
     dmg *= target.guard;
+    if (target.polymorphT > 0) dmg *= 1.2;
 
     let crit = false;
     if (!opts.dot && this.rng.chance(0.1)) {
@@ -807,18 +860,64 @@ export class World {
     });
   }
 
-  spawnMouseMinion(x: number, y: number, owner: Side): void {
-    this.minions.push({
-      x,
-      y,
-      vx: 0,
-      vy: 0,
-      owner,
-      life: 4,
-      maxLife: 4,
-      speed: 150,
-      radius: 12,
-    });
+  spawnMouseSummon(f: Frog): void {
+    const c = makeFrog(SUMMON_MOUSE, f.side);
+    c.isSummon = true;
+    c.summonKind = 'mouse';
+    c.pos = {
+      x: Math.min(ARENA.x + ARENA.w - c.radius, Math.max(ARENA.x + c.radius, f.pos.x + 34)),
+      y: Math.min(ARENA.y + ARENA.h - c.radius, Math.max(ARENA.y + c.radius, f.pos.y - 26)),
+    };
+    c.vel = fromAngle(this.rng.range(0, Math.PI * 2), c.speed * MOVE_SPEED_MULT);
+    c.cds = [999, 999];
+    c.clawCd = 0.4;
+    c.maxHp = 14;
+    c.hp = 14;
+    c.stats = { damage: 0, skills: 0, hits: 0 };
+    this.clones.push(c);
+    this.ring(c.pos.x, c.pos.y, 8, 60, 0.3, '#ffe6a0', 4, false);
+    this.text(f.pos.x, f.pos.y - 62, '吱！', '#8a5a00', 14);
+  }
+
+  splitTiger(f: Frog): boolean {
+    if (f.splitUsed) return false;
+    if (this.clones.some((c) => c.side === f.side && c.summonKind === 'tiger' && !c.dead)) {
+      return false;
+    }
+    f.splitUsed = true;
+    const c = makeFrog(f.def, f.side);
+    c.isSummon = true;
+    c.summonKind = 'tiger';
+    c.splitUsed = true;
+    const part = Math.max(1, Math.round(f.hp * 0.7));
+    f.hp = Math.max(1, f.hp - Math.round(f.hp * 0.3));
+    c.maxHp = f.maxHp;
+    c.hp = part;
+    const foe = this.nearestFoe(f);
+    const away = foe
+      ? Math.atan2(f.pos.y - foe.pos.y, f.pos.x - foe.pos.x)
+      : f.facing + Math.PI;
+    const side = away + (Math.PI / 2) * (this.rng.chance(0.5) ? 1 : -1);
+    c.pos = {
+      x: Math.min(
+        ARENA.x + ARENA.w - c.radius,
+        Math.max(ARENA.x + c.radius, f.pos.x + Math.cos(side) * 92),
+      ),
+      y: Math.min(
+        ARENA.y + ARENA.h - c.radius,
+        Math.max(ARENA.y + c.radius, f.pos.y + Math.sin(side) * 92),
+      ),
+    };
+    c.vel = fromAngle(f.facing + Math.PI * 0.55, c.speed * MOVE_SPEED_MULT);
+    c.cds = [999, 999];
+    c.clawCd = 0.5;
+    c.stats = { damage: 0, skills: 0, hits: 0 };
+    this.clones.push(c);
+    this.ring(f.pos.x, f.pos.y, 12, 140, 0.45, '#ffe0a3', 8, true);
+    this.burst(f.pos.x, f.pos.y, 30, '#ffcf6b', 300, 6);
+    this.text(f.pos.x, f.pos.y - 80, '分裂！', '#b3541e', 22);
+    this.shake(10);
+    return true;
   }
 
   spawnPoop(side: Side, x: number, y: number, angle: number): void {
@@ -902,7 +1001,7 @@ export class World {
         continue;
       }
 
-      for (const f of this.frogs) {
+      for (const f of this.allBodies()) {
         if (f.dead || f.hidden > 0) continue;
         if (p.kind === 'bubble' && f.side === p.owner) continue;
         if (p.hitCd[f.side] > 0) continue;
@@ -956,7 +1055,7 @@ export class World {
     this.ring(p.x, p.y, 8, 150, 0.4, '#ff9a3d', 8, true);
     this.burst(p.x, p.y, 32, '#ffb347', 360, 7);
     this.shake(12);
-    for (const f of this.frogs) {
+    for (const f of this.allBodies()) {
       if (f.dead || f.hidden > 0) continue;
       if (Math.hypot(f.pos.x - p.x, f.pos.y - p.y) > 150 + f.radius) continue;
       const source = f.side === p.owner ? null : this.frogs[p.owner];
@@ -1007,7 +1106,7 @@ export class World {
       t.arm -= step;
       t.blink += step;
       if (t.arm > 0) continue;
-      const foe = this.frogs[t.owner === 0 ? 1 : 0];
+      const foe = this.nearestFoe(this.frogs[t.owner]) ?? this.frogs[t.owner === 0 ? 1 : 0];
       if (foe.dead || foe.hidden > 0) continue;
       if (Math.hypot(foe.pos.x - t.x, foe.pos.y - t.y) > 58 + foe.radius * 0.4) continue;
 
@@ -1015,7 +1114,7 @@ export class World {
       if (t.kind === 'banana') {
         this.ring(t.x, t.y, 8, 54, 0.3, '#ffe07a', 3, false);
         this.burst(t.x, t.y, 12, '#ffe07a', 160, 4);
-        this.damage(foe, 8, this.frogs[t.owner], {
+        this.damage(foe, 12, this.frogs[t.owner], {
           kb: 180,
           angle: Math.atan2(foe.pos.y - t.y, foe.pos.x - t.x),
           stun: 1.2,
@@ -1027,7 +1126,7 @@ export class World {
       this.burst(t.x, t.y, 26, '#ffe6a0', 320, 6);
       this.shake(10);
       this.hitstop = Math.max(this.hitstop, 0.06);
-      for (const f of this.frogs) {
+      for (const f of this.allBodies()) {
         if (f.dead || f.hidden > 0) continue;
         const d = Math.hypot(f.pos.x - t.x, f.pos.y - t.y);
         if (d > t.radius + f.radius) continue;
@@ -1047,7 +1146,7 @@ export class World {
       v.life -= step;
       v.spin += step * 8;
 
-      for (const f of this.frogs) {
+      for (const f of this.allBodies()) {
         if (f.dead || f.hidden > 0) continue;
         const dx = v.x - f.pos.x;
         const dy = v.y - f.pos.y;
@@ -1064,7 +1163,7 @@ export class World {
         this.ring(v.x, v.y, 20, v.radius * 1.25, 0.4, '#8fdcff', 7, true);
         this.burst(v.x, v.y, 30, '#bfe9ff', 360, 5);
         this.shake(10);
-        for (const f of this.frogs) {
+        for (const f of this.allBodies()) {
           if (f.dead || f.hidden > 0 || f.side === v.owner) continue;
           const d = Math.hypot(f.pos.x - v.x, f.pos.y - v.y);
           if (d > v.radius * 1.2 + f.radius) continue;
@@ -1085,7 +1184,7 @@ export class World {
       z.tick += step;
       const doDamage = z.tick >= 0.5;
       if (doDamage) z.tick -= 0.5;
-      for (const f of this.frogs) {
+      for (const f of this.allBodies()) {
         if (f.dead || f.hidden > 0 || f.side === z.owner) continue;
         const d = Math.hypot(f.pos.x - z.x, f.pos.y - z.y);
         if (d > z.radius + f.radius) continue;
@@ -1105,7 +1204,7 @@ export class World {
       this.ring(b.x, b.y, 10, b.radius, 0.4, b.color, 7, true);
       this.burst(b.x, b.y, 24, b.color, 300, 5);
       this.shake(8);
-      for (const f of this.frogs) {
+      for (const f of this.allBodies()) {
         if (f.dead || f.hidden > 0 || f.side === b.owner) continue;
         const d = Math.hypot(f.pos.x - b.x, f.pos.y - b.y);
         if (d > b.radius + f.radius) continue;
@@ -1123,9 +1222,28 @@ export class World {
 
   private checkDeaths(): void {
     if (this.phase !== 'fight') return;
+    for (const side of [0, 1] as const) {
+      const f = this.frogs[side];
+      if (f.dead || f.hp > 0) continue;
+      const backup = this.clones.find(
+        (c) => c.side === side && c.summonKind === 'tiger' && !c.dead && c.hp > 0,
+      );
+      if (backup) {
+        // the split tiger takes over: remove the fallen body, promote the clone
+        backup.isSummon = false;
+        backup.summonKind = null;
+        backup.cds = [1.5, 2.5];
+        backup.clawCd = 0;
+        this.clones = this.clones.filter((c) => c !== backup);
+        this.frogs[side] = backup;
+        this.burst(f.pos.x, f.pos.y, 20, '#ffe0a3', 260, 5);
+        this.text(backup.pos.x, backup.pos.y - 70, '换我上！', '#b3541e', 18);
+      } else {
+        this.kill(f);
+      }
+    }
+
     const [a, b] = this.frogs;
-    if (!a.dead && a.hp <= 0) this.kill(a);
-    if (!b.dead && b.hp <= 0) this.kill(b);
     if (a.dead || b.dead) {
       this.phase = 'ko';
       this.koTimer = 1.8;
@@ -1263,6 +1381,24 @@ export class World {
 
   foe(f: Frog): Frog {
     return this.frogs[f.side === 0 ? 1 : 0];
+  }
+
+  allBodies(): Frog[] {
+    return [...this.frogs, ...this.clones];
+  }
+
+  nearestFoe(f: Frog): Frog | null {
+    let best: Frog | null = null;
+    let bestD = Infinity;
+    for (const b of this.allBodies()) {
+      if (b.dead || b.side === f.side) continue;
+      const d = dist(f.pos, b.pos);
+      if (d < bestD) {
+        bestD = d;
+        best = b;
+      }
+    }
+    return best;
   }
 
   get playerNames(): [string, string] {
